@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main", "master" ]  # 触发分支
     tags:                          # 推送标签时也触发
-      - 'v*.*.*'                   # 匹配语义化版本标签如v1.0.0
+      - 'v*.*.*'                   # 匹配语义化版本标签如v1.0.
   pull_request:
     branches: [ "main", "master" ]
 
