@@ -1,33 +1,21 @@
-# 使用Node.js LTS版本作为基础镜像
-FROM node:18-alpine
+# 使用官方 Python 3.8 镜像作为基础
+FROM python:3.8-slim
 
 # 设置工作目录
 WORKDIR /app
 
-# 复制依赖定义文件
-COPY package*.json ./
+# 复制依赖列表并安装依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 安装依赖（补充编译工具）
-RUN apk add --no-cache python3 make g++ && \
-    npm install --omit=dev --ignore-scripts && \
-    apk del python3 make g++
-
-# 复制项目文件
+# 复制项目所有文件到容器
 COPY . .
 
-# 创建数据存储目录
-RUN mkdir -p /app/data
+# 声明数据卷（用于持久化数据）
+VOLUME /app/data
 
-# 暴露端口
+# 暴露项目端口
 EXPOSE 9763
 
-# 设置环境变量
-ENV NODE_ENV=production \
-    PORT=9763 \
-    DATA_DIR=/app/data
-
-# 修正后的启动命令（使用server脚本）
-CMD ["npm", "run", "server"]
-
-# 定义数据卷
-VOLUME ["/app/data"]
+# 设置容器启动命令
+CMD ["python", "main.py"]
