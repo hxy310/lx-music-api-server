@@ -1,0 +1,50 @@
+name: Docker Build and Push
+
+on:
+  push:
+    branches: [ "main", "master" ]  # 触发分支
+    tags:                          # 推送标签时也触发
+      - 'v*.*.*'                   # 匹配语义化版本标签如v1.0.0
+  pull_request:
+    branches: [ "main", "master" ]
+
+env:
+  REGISTRY: docker.io              # Docker Hub注册地址
+  IMAGE_NAME: sunuo/lx-music-api-server  # Docker镜像名称
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
