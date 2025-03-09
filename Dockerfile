@@ -1,20 +1,20 @@
-# 使用官方 Python 3.8 镜像作为基础
+# Dockerfile for lx-music-api-server
+# 使用官方Python 3.8镜像作为基础
 FROM python:3.8-slim
 
 # 设置工作目录
 WORKDIR /app
 
-# 复制依赖列表并安装依赖
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 复制项目所有文件到容器
+# 复制项目文件到容器（建议先创建.dockerignore文件排除不需要的文件）
 COPY . .
 
-# 声明数据卷（用于持久化数据）
-VOLUME /app/data
+# 安装项目依赖（使用清华PyPI镜像加速）
+RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-# 暴露项目端口
+# 声明需要持久化的目录
+VOLUME ["/app/audio", "/app/config", "/app/logs", "/app/temp"]
+
+# 暴露服务端口
 EXPOSE 9763
 
 # 设置容器启动命令
