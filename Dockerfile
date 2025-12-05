@@ -40,7 +40,9 @@ COPY main.py /app/main.py
 # ============================
 FROM python:3.10-slim AS runtime
 
-ENV PATH=/root/.local/bin:$PATH
+ENV PATH=/root/.local/bin:$PATH \
+    UV_VENV_PATH=/root/.local \
+    UV_PYTHON_PREFERENCE=python-build
 WORKDIR /app
 
 # 复制 uv 构建出的依赖环境
