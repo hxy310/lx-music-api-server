@@ -1,29 +1,37 @@
-# 1. 基础镜像：使用官方 Python 3.9 轻量版
-FROM python:3.9-slim
+# 使用官方 Python 3.10 精简镜像
+FROM python:3.10-slim
 
-# 2. 设置工作目录
+# 环境优化
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/root/.local/bin:$PATH
+
 WORKDIR /app
 
-# 3. 设置时区为上海，防止日志时间错乱
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# 安装系统依赖（尽量精简），并清理缓存
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
 
-# 4. 复制依赖清单并安装
-# 使用阿里云镜像源加速安装依赖，提高构建成功率
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
+# 复制依赖文件并安装 Python 依赖
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# 5. 复制项目的所有代码到镜像中
-COPY . .
+# 复制代码
+COPY . /app
 
-# 6. 预创建配置目录和日志目录 (这是关键，确保挂载点存在)
-RUN mkdir -p /app/config /app/logs
+# 创建非 root 用户并设置权限
+RUN useradd -m appuser || true \
+ && chown -R appuser:appuser /app
 
-# 7. 声明数据卷，明确告诉 Docker 这些目录是用来存数据的
-VOLUME ["/app/config", "/app/logs"]
+USER appuser
 
-# 8. 暴露端口
+# 暴露应用端口（与你要求一致）
 EXPOSE 9763
 
-# 9. 启动命令
+# 可选：简单健康检查（若需要可以改为更具体的 URL）
+HEALTHCHECK --interval=30s --start-period=10s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:9763/ || exit 1
+
+# 默认启动命令 —— 如果仓库需要使用 uv 启动或特殊参数可在这里改动
 CMD ["python", "main.py"]
