@@ -1,32 +1,29 @@
 # ============================
-# Builder 阶段：安装 uv 并安装依赖
+# 基础构建镜像
 # ============================
 FROM python:3.10-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH=/root/.local/bin:$PATH \
-    UV_VENV_PATH=/root/.local \
-    UV_PYTHON_PREFERENCE=python-build
+    PATH=/root/.local/bin:$PATH
 
 WORKDIR /app
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl build-essential ca-certificates \
-    libssl-dev libffi-dev python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 uv
+# 安装 UV
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 只复制依赖文件（不要复制 .venv）
+# 只复制必要文件（避免 .venv 被复制）
 COPY pyproject.toml uv.lock /app/
 
-# 使用 uv 安装项目依赖到 /root/.local
+# 先创建虚拟环境并安装依赖
 RUN uv sync --no-dev
 
-# 再复制源码（不包含 .venv）
+# 再复制项目源码（不要复制 .venv）
 COPY api /app/api
 COPY server /app/server
 COPY utils /app/utils
@@ -39,32 +36,29 @@ COPY clean.py /app/clean.py
 COPY main.py /app/main.py
 
 # ============================
-# Runtime 阶段：干净运行
+# 运行环境
 # ============================
 FROM python:3.10-slim AS runtime
 
-ENV PATH=/root/.local/bin:$PATH \
-    UV_VENV_PATH=/root/.local \
-    UV_PYTHON_PREFERENCE=python-build
-
+ENV PATH=/root/.local/bin:$PATH
 WORKDIR /app
 
-# 复制 uv 安装好的依赖
+# 复制 uv 构建出的依赖环境
 COPY --from=builder /root/.local /root/.local
 
-# 复制源码
+# 复制应用代码
 COPY --from=builder /app /app
 
-# 创建非 root 用户
+# 运行用户
 RUN useradd -m appuser || true \
  && chown -R appuser:appuser /app
 USER appuser
 
-# 暴露端口
+# 端口
 EXPOSE 9763
 
 # 健康检查
 HEALTHCHECK CMD curl -fsS http://127.0.0.1:9763/ || exit 1
 
-# 默认启动命令
+# 入口命令
 CMD ["uv", "run", "main.py"]
