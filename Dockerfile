@@ -1,4 +1,7 @@
-FROM python:3.10-slim AS base
+# ============================
+# 基础构建镜像
+# ============================
+FROM python:3.10-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -11,44 +14,51 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl build-essential ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-
-# ============================
-# 安装 uv + 项目依赖
-# ============================
-FROM base AS builder
-
 # 安装 UV
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 拷贝项目文件
-COPY . /app
+# 只复制必要文件（避免 .venv 被复制）
+COPY pyproject.toml uv.lock /app/
 
-# 使用 uv 安装 pyproject.toml 里的依赖
+# 先创建虚拟环境并安装依赖
 RUN uv sync --no-dev
 
+# 再复制项目源码（不要复制 .venv）
+COPY api /app/api
+COPY server /app/server
+COPY utils /app/utils
+COPY crypt /app/crypt
+COPY middleware /app/middleware
+COPY modules /app/modules
+COPY res /app/res
+COPY static /app/static
+COPY clean.py /app/clean.py
+COPY main.py /app/main.py
 
 # ============================
-# 运行环境镜像（干净）
+# 运行环境
 # ============================
 FROM python:3.10-slim AS runtime
 
 ENV PATH=/root/.local/bin:$PATH
 WORKDIR /app
 
-# 拷贝运行所需环境
+# 复制 uv 构建出的依赖环境
 COPY --from=builder /root/.local /root/.local
+
+# 复制应用代码
 COPY --from=builder /app /app
 
-# 创建非 root 用户
+# 运行用户
 RUN useradd -m appuser || true \
  && chown -R appuser:appuser /app
 USER appuser
 
-# 暴露端口（与你项目一致）
+# 端口
 EXPOSE 9763
 
 # 健康检查
 HEALTHCHECK CMD curl -fsS http://127.0.0.1:9763/ || exit 1
 
-# 运行应用（你的项目正确启动方式）
+# 入口命令
 CMD ["uv", "run", "main.py"]
