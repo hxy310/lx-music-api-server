@@ -34,4 +34,4 @@ HEALTHCHECK --interval=30s --start-period=10s --retries=3 \
   CMD curl -fsS http://127.0.0.1:9763/ || exit 1
 
 # 默认启动命令 —— 如果仓库需要使用 uv 启动或特殊参数可在这里改动
-CMD ["python", "main.py"]
+CMD ["uv", "run", "main.py"]
