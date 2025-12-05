@@ -14,6 +14,7 @@ WORKDIR /app
 # 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl build-essential ca-certificates \
+    libssl-dev libffi-dev python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 uv
