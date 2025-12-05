@@ -1,4 +1,4 @@
-# 基础镜像，带 Python 3.11
+# 基础镜像，Python 3.11 slim
 FROM python:3.11-slim
 
 # 安装依赖
@@ -10,11 +10,11 @@ WORKDIR /app
 # 复制项目文件
 COPY . /app
 
-# 安装 uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# 安装 uv 到 /usr/local/bin
+RUN curl -LsSf https://astral.sh/uv/install.sh | bash -s -- -b /usr/local/bin
 
-# 将 uv 可执行文件加入 PATH
-ENV PATH="/root/.uv/bin:${PATH}"
+# 确认 uv 安装成功
+RUN uv --version
 
 # 同步 uv 环境
 RUN uv sync
